@@ -41,6 +41,8 @@
   .card{background:var(--surface-1);border:1px solid var(--ring);border-radius:14px;
     padding:22px 24px;margin-top:22px}
   .card h2{font-size:16px;font-weight:650;margin:0 0 3px;letter-spacing:-.01em}
+  .card h3.subh{font-size:14.5px;font-weight:650;margin:26px 0 3px;padding-top:20px;
+    border-top:1px solid var(--grid);letter-spacing:-.01em}
   .card p.note{color:var(--ink-2);font-size:13px;margin:0 0 18px}
   /* hero tiles */
   .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:22px}
@@ -144,20 +146,16 @@
     <div id="areachart"></div>
   </div>
 
-  <!-- MAP -->
+  <!-- MAP + GEO — one card, one shared selector drives both views -->
   <div class="card">
-    <h2>Global reach</h2>
-    <p class="note">Each circle is a region that pulled data, placed at its location and sized (area) by volume served. Pick a Dandiset to see where its downloads came from, or view all combined. Modeled on the DANDI usage page's points view. Cloud/data-center egress (AWS, GCP) is shown separately — it marks server locations, not people.</p>
+    <h2>Where downloads come from</h2>
+    <p class="note">Where the data for these Dandisets is downloaded and streamed. The selector below drives <b>both</b> views — the map and the ranked list — so you can see all datasets combined or the geography of a single Dandiset.</p>
     <div class="mapctl"><label for="map-select">Show downloads for</label>
       <select id="map-select"></select></div>
     <div class="legend" id="leg-map"></div>
     <div id="map"></div>
-  </div>
-
-  <!-- GEO -->
-  <div class="card">
-    <h2>Where the data goes (by volume)</h2>
-    <p class="note">Top regions by volume. Massachusetts (the ASAP hub) leads, followed by cloud/compute egress. Shanghai and Korea signal real international reuse. Cloud/masked egress (<i>AWS / GCP / VPN</i>) is shown in gray. Follows the map selector above — <b id="geo-cap">showing all datasets combined</b>.</p>
+    <h3 class="subh">Top regions by volume</h3>
+    <p class="note">Each region's share of the selected traffic. Massachusetts (the ASAP hub) leads; cloud/masked egress (<i>AWS / GCP / VPN</i>) is shown in gray. Showing <b id="geo-cap">all datasets combined</b>.</p>
     <div id="geobar"></div>
   </div>
 
@@ -512,7 +510,7 @@ function renderGeo(regions,label){
   const GEO_CLOUD=/^(AWS|GCP|VPN|GitHub)/;
   const box=document.getElementById('geobar');
   box.innerHTML='';
-  const cap=document.getElementById('geo-cap'); if(cap) cap.textContent='showing '+label;
+  const cap=document.getElementById('geo-cap'); if(cap) cap.textContent=label;
   const rows=regions.filter(r=>!GEO_HIDE.has(r.region)&&r.bytes>0).slice(0,12);
   if(!rows.length){box.innerHTML='<p class="note" style="margin:0">No regional data for this selection.</p>';return;}
   const W=1000,rowH=30,padL=150,padR=90,padT=6,H=padT+rows.length*rowH+18;
