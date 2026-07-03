@@ -118,6 +118,7 @@ def build_access(content: Path, order: list[str]):
     present = [d for d in order if (content / "summaries" / d).is_dir()]
 
     per, monthly, region_tot = {}, defaultdict(lambda: [0, 0]), defaultdict(int)
+    regions_by_id = {}
     for d in present:
         t = totals[d]
         days = [r["date"] for r in read_tsv(content / "summaries" / d / "by_day.tsv")]
@@ -136,8 +137,12 @@ def build_access(content: Path, order: list[str]):
             monthly[m][0] += int(r["bytes_sent"])
             dl = suppressed(r["number_of_downloads"])
             monthly[m][1] += dl or 0
+        drow = []
         for r in read_tsv(content / "summaries" / d / "by_region.tsv"):
             region_tot[r["region"]] += int(r["bytes_sent"])
+            drow.append({"region": r["region"], "bytes": int(r["bytes_sent"])})
+        drow.sort(key=lambda x: -x["bytes"])
+        regions_by_id[d] = drow
 
     data = {
         "per": per,
@@ -146,6 +151,7 @@ def build_access(content: Path, order: list[str]):
             {"region": k, "bytes": v}
             for k, v in sorted(region_tot.items(), key=lambda x: -x[1])
         ],
+        "regionsById": regions_by_id,
     }
     return present, data
 

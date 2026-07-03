@@ -157,7 +157,7 @@
   <!-- GEO -->
   <div class="card">
     <h2>Where the data goes (by volume)</h2>
-    <p class="note">Top regions across all 11 sets. Massachusetts (the ASAP hub) leads, followed by cloud/compute egress. Shanghai and Korea signal real international reuse. ~30% is cloud-masked or unresolved (<i>AWS / missing / undetermined / VPN</i>).</p>
+    <p class="note">Top regions by volume. Massachusetts (the ASAP hub) leads, followed by cloud/compute egress. Shanghai and Korea signal real international reuse. Cloud/masked egress (<i>AWS / GCP / VPN</i>) is shown in gray. Follows the map selector above — <b id="geo-cap">showing all datasets combined</b>.</p>
     <div id="geobar"></div>
   </div>
 
@@ -479,36 +479,47 @@ timePanel('time-bytes','bytes',v=>(v/1e12).toFixed(0)+'T','var(--m-ephys)','Mont
 
   function update(){
     const v=sel.value;
-    if(v==='__all__') draw(MAPDATA.points,'All datasets combined');
-    else draw(byId[v]||[], v);
+    if(v==='__all__'){
+      draw(MAPDATA.points,'All datasets combined');
+      renderGeo(DATA.regions,'all datasets combined');
+    }else{
+      const pi=META[v]?.pi, lab=(pi&&pi!=='—')?`${v} (${pi})`:v;
+      draw(byId[v]||[], lab);
+      renderGeo((DATA.regionsById&&DATA.regionsById[v])||[], lab);
+    }
   }
   sel.addEventListener('change',update);
   update();
 })();
 
-/* ---------- GEO BAR ---------- */
-(function(){
-  const HIDE=new Set(['missing','undetermined','bogon']);
-  const rows=DATA.regions.filter(r=>!HIDE.has(r.region)).slice(0,12);
-  const W=1000,rowH=30,padL=150,padR=90,padT=6,H=padT+rows.length*rowH+6;
+/* ---------- GEO BAR (follows the map selector) ---------- */
+function renderGeo(regions,label){
+  const GEO_HIDE=new Set(['missing','undetermined','bogon']);
+  const GEO_CLOUD=/^(AWS|GCP|VPN|GitHub)/;
+  const box=document.getElementById('geobar');
+  box.innerHTML='';
+  const cap=document.getElementById('geo-cap'); if(cap) cap.textContent='showing '+label;
+  const rows=regions.filter(r=>!GEO_HIDE.has(r.region)&&r.bytes>0).slice(0,12);
+  if(!rows.length){box.innerHTML='<p class="note" style="margin:0">No regional data for this selection.</p>';return;}
+  const W=1000,rowH=30,padL=150,padR=90,padT=6,H=padT+rows.length*rowH+18;
   const max=rows[0].bytes,x=v=>padL+(W-padL-padR)*v/max;
   const svg=el('svg',{viewBox:`0 0 ${W} ${H}`,role:'img'});
   for(let i=0;i<=4;i++){const gv=max*i/4,gx=x(gv);
-    svg.appendChild(el('line',{x1:gx,y1:padT,x2:gx,y2:H-6,class:'gridline'}));
-    const t=el('text',{x:gx,y:H,'text-anchor':'middle',class:'axlab'});t.textContent=(gv/1e12).toFixed(0)+'T';svg.appendChild(t);}
-  const cloud=/^(AWS|GCP|VPN|GitHub)/;
+    svg.appendChild(el('line',{x1:gx,y1:padT,x2:gx,y2:H-18,class:'gridline'}));
+    const t=el('text',{x:gx,y:H-4,'text-anchor':'middle',class:'axlab'});t.textContent=fmtTB(gv);svg.appendChild(t);}
   rows.forEach((r,i)=>{
     const y=padT+i*rowH+3,bh=20;
     const lab=el('text',{x:padL-12,y:y+bh-5,'text-anchor':'end',class:'rowlab'});lab.textContent=r.region;svg.appendChild(lab);
     const bw=Math.max(x(r.bytes)-padL,2);
-    const isCloud=cloud.test(r.region);
+    const isCloud=GEO_CLOUD.test(r.region);
     const bar=el('rect',{x:padL,y,width:bw,height:bh,rx:4,fill:isCloud?'var(--muted)':'var(--m-ephys)','fill-opacity':isCloud?.55:1});
     bar.addEventListener('mousemove',e=>showTT(`<b>${r.region}</b><br><span class="k">Volume</span> ${fmtTB(r.bytes)}${isCloud?'<br><span class="k">cloud / masked egress</span>':''}`,e));
     bar.addEventListener('mouseleave',hideTT);svg.appendChild(bar);
     const vl=el('text',{x:padL+bw+8,y:y+bh-5,class:'vlab'});vl.textContent=fmtTB(r.bytes);svg.appendChild(vl);
   });
-  document.getElementById('geobar').appendChild(svg);
-})();
+  box.appendChild(svg);
+}
+if(!(MAPDATA.byId&&Object.keys(MAPDATA.byId).length)) renderGeo(DATA.regions,'all datasets combined');
 
 /* ---------- FULL TABLE ---------- */
 (function(){
