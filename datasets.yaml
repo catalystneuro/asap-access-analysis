@@ -1,0 +1,29 @@
+# ASAP-affiliated Dandisets — curated metadata.
+# Order here is the display order used across the dashboard (tables, status bar).
+# `status` is one of: published | draft | embargoed
+# `release` (embargoed only) is the scheduled public-release date.
+# Access statistics (downloads, volume, regions) are pulled automatically from
+# the DANDI access-summaries dataset; only datasets with recorded traffic appear
+# in the data-driven charts. Datasets without a summary directory are shown in
+# the "Status of datasets" section as awaiting publication.
+datasets:
+  - {id: "000947", pi: "Robert Turner",        modality: "Extra ephys",                  region: "GPi",                species: "Monkey", year: 2024, status: published}
+  - {id: "000971", pi: "Talia Lerner",         modality: "Fiber photometry",             region: "Striatum",           species: "Mouse",  year: 2024, status: published}
+  - {id: "001177", pi: "Alexandra Nelson",     modality: "Extra ephys",                  region: "Striatum",           species: "Mouse",  year: 2025, status: published}
+  - {id: "001130", pi: "—",                    modality: "Extra ephys",                  region: "Striatum",           species: "Mouse",  year: 2025, status: draft}
+  - {id: "001180", pi: "—",                    modality: "Extra ephys",                  region: "Striatum",           species: "Mouse",  year: 2025, status: embargoed, release: "2028-03-10"}
+  - {id: "001172", pi: "Michael Higley",       modality: "Calcium imaging",              region: "Neocortex",          species: "Mouse",  year: 2024, status: published}
+  - {id: "001170", pi: "Jacob Reimer",         modality: "Calcium imaging",              region: "Olfactory Bulb",     species: "Mouse",  year: 2025, status: published}
+  - {id: "001038", pi: "Daniel Dombeck",       modality: "Fiber photometry",             region: "Substantia Nigra",   species: "Mouse",  year: 2024, status: published}
+  - {id: "001084", pi: "Mark Howe",            modality: "Fiber photometry",             region: "Striatum",           species: "Mouse",  year: 2024, status: published}
+  - {id: "001692", pi: "Internal",             modality: "Fiber photometry",             region: "Striatum",           species: "Mouse",  year: 2026, status: published}
+  - {id: "001528", pi: "Tom Hnasko",           modality: "Fiber photometry",             region: "Substantia Nigra",   species: "Mouse",  year: 2025, status: embargoed, release: "2028-03-10"}
+  - {id: "001538", pi: "Jim Surmeier",         modality: "Intra ephys / line scans",     region: "Striatum",           species: "Mouse",  year: 2025, status: published}
+  - {id: "001832", pi: "Internal",             modality: "Calcium imaging / intra ephys", region: "Striatum",          species: "Mouse",  year: 2026, status: draft}
+  - {id: "001627", pi: "Helen Schwerdt",       modality: "Extra ephys / FSCV",           region: "Striatum",           species: "Monkey", year: 2025, status: embargoed, release: "2027-10-16"}
+  - {id: "001628", pi: "—",                    modality: "Extra ephys / FSCV",           region: "Striatum",           species: "Monkey", year: 2025, status: embargoed, release: "2027-10-16"}
+  - {id: "001617", pi: "Yang Dan",             modality: "Fiber photometry / EEG",       region: "Nucleus accumbens",  species: "Mouse",  year: 2025, status: embargoed, release: "2027-10-01"}
+  - {id: "001711", pi: "—",                    modality: "EEG / EMG / DLC",              region: "—",                  species: "Mouse",  year: 2025, status: embargoed, release: "2028-02-06"}
+  - {id: "001693", pi: "Khaliq Zayd",          modality: "Intra ephys",                  region: "Substantia Nigra",   species: "Monkey", year: 2026, status: embargoed, release: "2028-01-09"}
+  - {id: "001636", pi: "Robert Turner",        modality: "Extra ephys",                  region: "Primary Motor Cortex", species: "Monkey", year: 2025, status: published}
+  - {id: "001828", pi: "Konstantinos Meletis", modality: "Fiber photometry",             region: "SNc",                species: "Mouse",  year: 2026, status: embargoed, release: "2028-04-29"}

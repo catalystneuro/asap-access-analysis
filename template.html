@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Download and access statistics for 20 ASAP-affiliated Dandisets on the DANDI Archive.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%93%8A%3C/text%3E%3C/svg%3E">
+<meta name="color-scheme" content="light dark">
+<title>ASAP Dandiset Download Analysis</title>
+<style>
+  :root{
+    --surface-1:#fcfcfb; --page:#f9f9f7;
+    --ink:#0b0b0b; --ink-2:#52514e; --muted:#898781;
+    --grid:#e1e0d9; --axis:#c3c2b7; --ring:rgba(11,11,11,0.10);
+    --m-ephys:#2a78d6;  /* Extra ephys */
+    --m-photo:#1baf7a;  /* Fiber photometry */
+    --m-ca:#eda100;     /* Calcium imaging */
+    --m-mix:#4a3aa7;    /* Intra ephys / mixed */
+    --pub:#2a78d6; --draft:#eda100; --emb:#898781;
+    --good:#006300;
+    --sa1:#2a78d6; --sa2:#1baf7a; --sa3:#eda100; --sa4:#008300; --sa5:#4a3aa7; --sa6:#e34948;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --surface-1:#1a1a19; --page:#0d0d0d;
+      --ink:#ffffff; --ink-2:#c3c2b7; --muted:#898781;
+      --grid:#2c2c2a; --axis:#383835; --ring:rgba(255,255,255,0.10);
+      --m-ephys:#3987e5; --m-photo:#199e70; --m-ca:#c98500; --m-mix:#9085e9;
+      --pub:#3987e5; --draft:#c98500; --emb:#898781; --good:#0ca30c;
+      --sa1:#3987e5; --sa2:#199e70; --sa3:#c98500; --sa4:#008300; --sa5:#9085e9; --sa6:#e66767;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--page);color:var(--ink);
+    font-family:system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.5;
+    -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1080px;margin:0 auto;padding:40px 24px 80px}
+  header h1{font-size:clamp(24px,3.4vw,34px);font-weight:700;letter-spacing:-.02em;margin:0 0 6px}
+  header p.sub{color:var(--ink-2);margin:0 0 4px;font-size:15px;max-width:70ch}
+  header p.meta{color:var(--muted);margin:8px 0 0;font-size:12.5px}
+  .card{background:var(--surface-1);border:1px solid var(--ring);border-radius:14px;
+    padding:22px 24px;margin-top:22px}
+  .card h2{font-size:16px;font-weight:650;margin:0 0 3px;letter-spacing:-.01em}
+  .card p.note{color:var(--ink-2);font-size:13px;margin:0 0 18px}
+  /* hero tiles */
+  .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:22px}
+  .tile{background:var(--surface-1);border:1px solid var(--ring);border-radius:14px;padding:18px 18px 16px}
+  .tile .v{font-size:clamp(24px,3vw,32px);font-weight:700;letter-spacing:-.02em;line-height:1.05}
+  .tile .l{color:var(--ink-2);font-size:12.5px;margin-top:6px}
+  .tile .s{color:var(--muted);font-size:11.5px;margin-top:2px}
+  @media(max-width:720px){.tiles{grid-template-columns:repeat(2,1fr)}}
+  /* legend */
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin:0 0 16px;font-size:12.5px;color:var(--ink-2)}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .sw{width:11px;height:11px;border-radius:3px;flex:none}
+  /* generic svg */
+  svg{display:block;width:100%;height:auto;overflow:visible}
+  .axlab{fill:var(--muted);font-size:11px}
+  .vlab{fill:var(--ink);font-size:11.5px;font-variant-numeric:tabular-nums}
+  .rowlab{fill:var(--ink);font-size:12px}
+  .rowlink{fill:var(--m-ephys);cursor:pointer;text-decoration:underline}
+  a:hover .rowlink{fill:var(--m-mix)}
+  .rowsub{fill:var(--muted);font-size:10.5px}
+  .gridline{stroke:var(--grid);stroke-width:1}
+  .baseline{stroke:var(--axis);stroke-width:1}
+  /* tooltip */
+  #tt{position:fixed;pointer-events:none;opacity:0;transition:opacity .1s;z-index:50;
+    background:var(--surface-1);border:1px solid var(--ring);border-radius:9px;
+    padding:8px 11px;font-size:12px;color:var(--ink);box-shadow:0 6px 22px rgba(0,0,0,.16);max-width:240px}
+  #tt b{font-weight:650}
+  #tt .k{color:var(--muted)}
+  /* scatter */
+  .dot{stroke:var(--surface-1);stroke-width:2;cursor:pointer}
+  .dotlab{fill:var(--ink-2);font-size:10.5px;font-variant-numeric:tabular-nums}
+  /* table */
+  details{margin-top:22px}
+  summary{cursor:pointer;color:var(--ink-2);font-size:13px;padding:6px 0}
+  table{border-collapse:collapse;width:100%;font-size:12.5px;margin-top:10px;overflow-x:auto;display:block}
+  th,td{text-align:right;padding:7px 10px;border-bottom:1px solid var(--grid);white-space:nowrap;
+    font-variant-numeric:tabular-nums}
+  th:first-child,td:first-child,th.l,td.l{text-align:left;font-variant-numeric:normal}
+  thead th{color:var(--muted);font-weight:600;border-bottom:1px solid var(--axis)}
+  .foot{color:var(--muted);font-size:11.5px;margin-top:28px;text-align:center;line-height:1.7}
+  a{color:var(--m-ephys)}
+  /* status stacked bar */
+  .statbar{display:flex;width:100%;height:30px;gap:2px}
+  .statbar i{display:flex;align-items:center;justify-content:center;height:100%;border-radius:5px;
+    color:var(--surface-1);font-size:12.5px;font-weight:650;font-variant-numeric:tabular-nums}
+  .statlegend{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:14px;font-size:12.5px;color:var(--ink-2)}
+  .statlegend span{display:inline-flex;align-items:center;gap:7px}
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <header>
+    <h1>ASAP Dandiset Download Analysis</h1>
+    <p class="sub">Access statistics for 20 ASAP-affiliated Dandisets on the DANDI Archive — full downloads and streaming traffic. 11 of the 20 have recorded public access; the other 9 are embargoed or newly drafted.</p>
+    <p class="meta">Source: DANDI <code>access-summaries</code> · data through 21 Jun 2026 · full-download counts under 50 are privacy-suppressed by DANDI</p>
+  </header>
+
+  <div class="tiles" id="tiles"></div>
+
+  <!-- COVERAGE -->
+  <div class="card">
+    <h2>Status of datasets</h2>
+    <p class="note">Publication status of all 20 requested Dandisets. <b>8 datasets are awaiting the publication of their corresponding paper and have not been shared publicly yet</b>, so they carry no download traffic — this accounts for most of the datasets without data.</p>
+    <div id="status"></div>
+  </div>
+
+  <!-- VOLUME BAR -->
+  <div class="card">
+    <h2>Data volume served, per Dandiset</h2>
+    <p class="note">Total bytes sent (downloads + streaming). Six large ephys/photometry sets carry 98% of the 45.5&nbsp;TB. Bars colored by recording modality.</p>
+    <div class="legend" id="leg-mod"></div>
+    <div id="volbar"></div>
+  </div>
+
+  <!-- SCATTER -->
+  <div class="card">
+    <h2>Reach vs. volume — two kinds of "popular"</h2>
+    <p class="note">Full downloads (how many people pulled it) against data volume (how heavy it is), both log-scaled. Bubble area ∝ unique requesters. The split is stark: heavy ephys files draw a small specialist audience (lower-right), while light photometry sets reach broad audiences (upper-left).</p>
+    <div id="scatter"></div>
+  </div>
+
+  <!-- TIME -->
+  <div class="card">
+    <h2>Traffic over time (all 11 combined)</h2>
+    <p class="note">Monthly data volume served. It climbs sharply through late 2025 into 2026 as newer large datasets come online.</p>
+    <div id="time-bytes"></div>
+  </div>
+
+  <!-- STACKED AREA PER DANDISET -->
+  <div class="card">
+    <h2>Data served over time, by Dandiset (top 6)</h2>
+    <p class="note">Monthly volume for the six highest-volume datasets, stacked. Dashed markers (▼) show when each Dandiset was created on DANDI — note the lag between creation and the first burst of downloads.</p>
+    <div class="legend" id="leg-area"></div>
+    <div id="areachart"></div>
+  </div>
+
+  <!-- MAP -->
+  <div class="card">
+    <h2>Global reach</h2>
+    <p class="note">Each circle is a region that pulled data, placed at its location and sized (area) by volume served. Modeled on the DANDI usage page's points view. Cloud/data-center egress (AWS, GCP) is shown separately — it marks server locations, not people.</p>
+    <div class="legend" id="leg-map"></div>
+    <div id="map"></div>
+  </div>
+
+  <!-- GEO -->
+  <div class="card">
+    <h2>Where the data goes (by volume)</h2>
+    <p class="note">Top regions across all 11 sets. Massachusetts (the ASAP hub) leads, followed by cloud/compute egress. Shanghai and Korea signal real international reuse. ~30% is cloud-masked or unresolved (<i>AWS / missing / undetermined / VPN</i>).</p>
+    <div id="geobar"></div>
+  </div>
+
+  <details>
+    <summary>▸ Full data table (all 20 Dandisets)</summary>
+    <div style="overflow-x:auto"><table id="tbl"></table></div>
+  </details>
+
+  <p class="foot">
+    Generated from the DANDI <code>access-summaries</code> dataset (doi.org/10.5281/zenodo.17148099).<br>
+    Full-download counts below 50 are shown by DANDI as “&lt;50”. Volume figures are exact; geography is approximate due to cloud/VPN masking.
+  </p>
+</div>
+
+<div id="tt"></div>
+
+<script>
+const DATA = __DATA__;
+
+const MAPDATA = __MAP__;
+
+const SIZES = __SIZES__;
+const TIMELINE = __TIMELINE__;
+
+const META = __META__;
+const ORDER = __ORDER__;
+
+function modGroup(m){
+  if(/calcium/i.test(m)&&/(ephys|intra)/i.test(m)) return 'mix';
+  if(/calcium/i.test(m)) return 'ca';
+  if(/photometry/i.test(m)) return 'photo';
+  if(/extra ephys/i.test(m)) return 'ephys';
+  return 'mix';
+}
+const MODCOL={ephys:'var(--m-ephys)',photo:'var(--m-photo)',ca:'var(--m-ca)',mix:'var(--m-mix)'};
+const MODLAB={ephys:'Extra ephys',photo:'Fiber photometry',ca:'Calcium imaging',mix:'Intra ephys / mixed'};
+
+const cssv=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function fmtTB(b){
+  if(b>=1e12)return (b/1e12).toFixed(2)+' TB';
+  if(b>=1e9)return (b/1e9).toFixed(1)+' GB';
+  if(b>=1e6)return (b/1e6).toFixed(1)+' MB';
+  if(b>=1e3)return (b/1e3).toFixed(0)+' KB';
+  return Math.round(b)+' B';
+}
+function fmtN(n){return n==null?'<50':n.toLocaleString('en-US');}
+const SVG='http://www.w3.org/2000/svg';
+function el(t,a){const e=document.createElementNS(SVG,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+
+// tooltip
+const tt=document.getElementById('tt');
+function showTT(html,e){tt.innerHTML=html;tt.style.opacity=1;moveTT(e);}
+function moveTT(e){let x=e.clientX+14,y=e.clientY+14;const r=tt.getBoundingClientRect();
+  if(x+r.width>innerWidth-8)x=e.clientX-r.width-14; if(y+r.height>innerHeight-8)y=e.clientY-r.height-14;
+  tt.style.left=x+'px';tt.style.top=y+'px';}
+function hideTT(){tt.style.opacity=0;}
+
+/* ---------- HERO TILES ---------- */
+(function(){
+  let tot=0,dl=0,req=0,withData=Object.keys(DATA.per).length;
+  for(const k in DATA.per){tot+=DATA.per[k].bytes;dl+=(DATA.per[k].dl||25);req+=DATA.per[k].req;}
+  const emb=ORDER.filter(d=>META[d].st==='embargoed').length;
+  const tiles=[
+    {v:(tot/1e12).toFixed(1)+' TB',l:'Total data served',s:'across 11 sets with public traffic'},
+    {v:'~'+Math.round(dl/1000)+'k',l:'Full downloads',s:'plus '+(req/1e6).toFixed(1)+'M total requests'},
+    {v:'11 / 20',l:'Datasets with access data',s:emb+' embargoed · 2 draft w/ traffic'},
+  ];
+  document.getElementById('tiles').innerHTML=tiles.map(t=>
+    `<div class="tile"><div class="v">${t.v}</div><div class="l">${t.l}</div><div class="s">${t.s}</div></div>`).join('');
+})();
+
+/* ---------- STATUS COVERAGE ---------- */
+(function(){
+  const groups={published:[],draft:[],embargoed:[]};
+  ORDER.forEach(d=>groups[META[d].st].push(d));
+  const box=document.getElementById('status');
+  const defs=[
+    {k:'published',c:'var(--pub)',lab:'Published'},
+    {k:'draft',c:'var(--draft)',lab:'Draft'},
+    {k:'embargoed',c:'var(--emb)',lab:'Embargoed'},
+  ];
+  const bar=document.createElement('div');bar.className='statbar';
+  bar.innerHTML=defs.map(def=>{
+    const n=groups[def.k].length;
+    return `<i style="flex:${n};background:${def.c}">${n}</i>`;
+  }).join('');
+  box.appendChild(bar);
+  const leg=document.createElement('div');leg.className='statlegend';
+  leg.innerHTML=defs.map(def=>{
+    const ids=groups[def.k], withd=ids.filter(d=>DATA.per[d]).length;
+    return `<span><span class="sw" style="background:${def.c}"></span>${def.lab} — ${ids.length} ${ids.length===1?'set':'sets'} · ${withd} w/ data</span>`;
+  }).join('');
+  box.appendChild(leg);
+})();
+
+/* ---------- MODALITY LEGEND ---------- */
+document.getElementById('leg-mod').innerHTML=Object.keys(MODLAB).map(k=>
+  `<span><span class="sw" style="background:${MODCOL[k]}"></span>${MODLAB[k]}</span>`).join('');
+
+/* ---------- VOLUME BAR (horizontal) ---------- */
+(function(){
+  const rows=Object.keys(DATA.per).map(d=>({d,...DATA.per[d],g:modGroup(META[d].mod)}))
+    .sort((a,b)=>b.bytes-a.bytes);
+  const W=1000,rowH=34,padL=250,padR=90,padT=8,H=padT+rows.length*rowH+8;
+  const max=rows[0].bytes;
+  const x=v=>padL+(W-padL-padR)*v/max;
+  const svg=el('svg',{viewBox:`0 0 ${W} ${H}`,role:'img'});
+  // gridlines
+  for(let i=0;i<=5;i++){const gv=max*i/5,gx=x(gv);
+    svg.appendChild(el('line',{x1:gx,y1:padT,x2:gx,y2:H-8,class:'gridline'}));
+    const t=el('text',{x:gx,y:H,'text-anchor':'middle',class:'axlab'});t.textContent=(gv/1e12).toFixed(0)+'T';svg.appendChild(t);}
+  rows.forEach((r,i)=>{
+    const y=padT+i*rowH+4,bh=20;
+    const a=el('a',{href:`https://dandiarchive.org/dandiset/${r.d}`,target:'_blank',rel:'noopener'});
+    a.setAttributeNS('http://www.w3.org/1999/xlink','href',`https://dandiarchive.org/dandiset/${r.d}`);
+    const lab=el('text',{x:padL-12,y:y+bh-6,'text-anchor':'end',class:'rowlab rowlink'});
+    lab.textContent=r.d;a.appendChild(lab);svg.appendChild(a);
+    const sub=el('text',{x:padL-12,y:y+bh+7,'text-anchor':'end',class:'rowsub'});
+    sub.textContent=META[r.d].pi+' · '+META[r.d].reg+' · '+META[r.d].sp;svg.appendChild(sub);
+    const bw=Math.max(x(r.bytes)-padL,2);
+    const bar=el('rect',{x:padL,y,width:bw,height:bh,rx:4,fill:MODCOL[r.g]});
+    const szB=SIZES[r.d], sz=szB?fmtTB(szB):'—', mult=szB?(r.bytes/szB).toFixed(1)+'×':'';
+    bar.addEventListener('mousemove',e=>showTT(`<b>${r.d}</b> — ${META[r.d].mod}<br><span class="k">Dataset size</span> ${sz}<br><span class="k">Data served</span> ${fmtTB(r.bytes)}${mult?` (${mult} its size)`:''}<br><span class="k">Downloads</span> ${fmtN(r.dl)} · <span class="k">Users</span> ${r.users.toLocaleString()}<br><span class="k">Reach</span> ${r.countries} countries`,e));
+    bar.addEventListener('mouseleave',hideTT);svg.appendChild(bar);
+    const vl=el('text',{x:padL+bw+8,y:y+bh-5,class:'vlab'});vl.textContent=fmtTB(r.bytes);svg.appendChild(vl);
+  });
+  document.getElementById('volbar').appendChild(svg);
+})();
+
+/* ---------- SCATTER: downloads vs volume ---------- */
+(function(){
+  const pts=Object.keys(DATA.per).map(d=>({d,...DATA.per[d],g:modGroup(META[d].mod)}))
+    .filter(p=>p.dl!=null); // drop suppressed (001130)
+  const supp=Object.keys(DATA.per).filter(d=>DATA.per[d].dl==null);
+  const W=1000,H=520,padL=70,padR=30,padT=20,padB=56;
+  const xmin=Math.log10(150),xmax=Math.log10(200000);
+  const ymin=Math.log10(0.02e12),ymax=Math.log10(12e12);
+  const X=v=>padL+(W-padL-padR)*(Math.log10(v)-xmin)/(xmax-xmin);
+  const Y=v=>H-padB-(H-padT-padB)*(Math.log10(v)-ymin)/(ymax-ymin);
+  const svg=el('svg',{viewBox:`0 0 ${W} ${H}`,role:'img'});
+  // grid x (downloads)
+  [1000,10000,100000].forEach(gv=>{const gx=X(gv);
+    svg.appendChild(el('line',{x1:gx,y1:padT,x2:gx,y2:H-padB,class:'gridline'}));
+    const t=el('text',{x:gx,y:H-padB+18,'text-anchor':'middle',class:'axlab'});
+    t.textContent=gv>=1000?(gv/1000)+'k':gv;svg.appendChild(t);});
+  // grid y (volume TB)
+  [0.03e12,0.1e12,0.3e12,1e12,3e12,10e12].forEach(gv=>{const gy=Y(gv);
+    svg.appendChild(el('line',{x1:padL,y1:gy,x2:W-padR,y2:gy,class:'gridline'}));
+    const t=el('text',{x:padL-10,y:gy+4,'text-anchor':'end',class:'axlab'});
+    t.textContent=(gv/1e12<1?(gv/1e12).toFixed(2):(gv/1e12).toFixed(0))+'T';svg.appendChild(t);});
+  // axis titles
+  let ax=el('text',{x:(padL+W-padR)/2,y:H-8,'text-anchor':'middle',class:'axlab'});ax.textContent='Full downloads (log) →';svg.appendChild(ax);
+  let ay=el('text',{x:16,y:(padT+H-padB)/2,'text-anchor':'middle',class:'axlab',transform:`rotate(-90 16 ${(padT+H-padB)/2})`});ay.textContent='Data volume (log) →';svg.appendChild(ay);
+  // bubbles
+  const rS=v=>Math.max(6,Math.sqrt(v)/2.4);
+  pts.sort((a,b)=>b.bytes-a.bytes).forEach(p=>{
+    const cx=X(p.dl),cy=Y(p.bytes),r=rS(p.users);
+    const c=el('circle',{cx,cy,r,class:'dot',fill:MODCOL[p.g],'fill-opacity':.72});
+    c.addEventListener('mousemove',e=>showTT(`<b>${p.d}</b> — ${META[p.d].pi}<br>${META[p.d].mod} · ${META[p.d].sp}<br><span class="k">Downloads</span> ${fmtN(p.dl)} · <span class="k">Volume</span> ${fmtTB(p.bytes)}<br><span class="k">Users</span> ${p.users.toLocaleString()} · ${p.countries} countries`,e));
+    c.addEventListener('mouseleave',hideTT);svg.appendChild(c);
+    const t=el('text',{x:cx,y:cy-r-4,'text-anchor':'middle',class:'dotlab'});t.textContent=p.d;svg.appendChild(t);
+  });
+  // annotations
+  const a1=el('text',{x:X(400),y:Y(8e12),class:'rowsub','text-anchor':'start'});a1.textContent='◤ heavy files, few specialist users';svg.appendChild(a1);
+  const a2=el('text',{x:X(140000),y:Y(0.35e12),class:'rowsub','text-anchor':'end'});a2.textContent='broad audience, light files ◢';svg.appendChild(a2);
+  document.getElementById('scatter').appendChild(svg);
+  if(supp.length){const n=document.createElement('p');n.className='note';n.style.margin='10px 0 0';
+    n.innerHTML=`Not shown: <b>${supp.join(', ')}</b> — download count privacy-suppressed (&lt;50).`;
+    document.getElementById('scatter').appendChild(n);}
+})();
+
+/* ---------- TIME PANELS ---------- */
+function timePanel(elId,key,fmt,color,title){
+  const m=DATA.monthly;
+  const W=1000,H=190,padL=64,padR=20,padT=14,padB=34;
+  const max=Math.max(...m.map(d=>d[key]))||1;
+  const bw=(W-padL-padR)/m.length;
+  const Y=v=>H-padB-(H-padT-padB)*v/max;
+  const svg=el('svg',{viewBox:`0 0 ${W} ${H}`,role:'img'});
+  const tt2=el('text',{x:padL,y:11,class:'axlab'});tt2.textContent=title;svg.appendChild(tt2);
+  // gridlines
+  for(let i=0;i<=3;i++){const gv=max*i/3,gy=Y(gv);
+    svg.appendChild(el('line',{x1:padL,y1:gy,x2:W-padR,y2:gy,class:'gridline'}));
+    const t=el('text',{x:padL-8,y:gy+4,'text-anchor':'end',class:'axlab'});t.textContent=fmt(gv);svg.appendChild(t);}
+  svg.appendChild(el('line',{x1:padL,y1:H-padB,x2:W-padR,y2:H-padB,class:'baseline'}));
+  m.forEach((d,i)=>{
+    const x=padL+i*bw, h=Math.max(H-padB-Y(d[key]),0);
+    const bar=el('rect',{x:x+1.5,y:Y(d[key]),width:Math.max(bw-3,1),height:h,rx:3,fill:color,'fill-opacity':.9});
+    bar.addEventListener('mousemove',e=>showTT(`<b>${d.m}</b><br><span class="k">Volume</span> ${fmtTB(d.bytes)}<br><span class="k">Downloads</span> ${d.dl.toLocaleString()}`,e));
+    bar.addEventListener('mouseleave',hideTT);svg.appendChild(bar);
+    if(i%3===0){const t=el('text',{x:x+bw/2,y:H-padB+16,'text-anchor':'middle',class:'axlab'});t.textContent=d.m.slice(2);svg.appendChild(t);}
+  });
+  document.getElementById(elId).appendChild(svg);
+}
+timePanel('time-bytes','bytes',v=>(v/1e12).toFixed(0)+'T','var(--m-ephys)','Monthly data volume');
+
+/* ---------- STACKED AREA: per-dandiset over time ---------- */
+(function(){
+  const T=TIMELINE, S=T.top6, M=T.months, n=M.length;
+  const COL=['var(--sa1)','var(--sa2)','var(--sa3)','var(--sa4)','var(--sa5)','var(--sa6)'];
+  const colOf={}; S.forEach((d,i)=>colOf[d]=COL[i]);
+  // legend
+  document.getElementById('leg-area').innerHTML=S.map((d,i)=>
+    `<span><span class="sw" style="background:${COL[i]}"></span>${d} · ${META[d].mod}</span>`).join('');
+
+  const W=1000,H=400,padL=58,padR=16,padT=44,padB=52;
+  const X=i=>padL+(W-padL-padR)*(n<=1?0:i/(n-1));
+  const stackMax=Math.max(...M.map((m,i)=>S.reduce((s,d)=>s+T.matrix[i][d],0)));
+  const Y=v=>H-padB-(H-padT-padB)*v/stackMax;
+  const svg=el('svg',{viewBox:`0 0 ${W} ${H}`,role:'img','aria-label':'Stacked data served over time by dandiset'});
+  // y gridlines
+  for(let k=0;k<=4;k++){const gv=stackMax*k/4,gy=Y(gv);
+    svg.appendChild(el('line',{x1:padL,y1:gy,x2:W-padR,y2:gy,class:'gridline'}));
+    const t=el('text',{x:padL-8,y:gy+4,'text-anchor':'end',class:'axlab'});t.textContent=(gv/1e12).toFixed(0)+'T';svg.appendChild(t);}
+  // x ticks (every 3 months)
+  M.forEach((m,i)=>{if(i%3===0){const t=el('text',{x:X(i),y:H-padB+16,'text-anchor':'middle',class:'axlab'});t.textContent=m.slice(2);svg.appendChild(t);}});
+  svg.appendChild(el('line',{x1:padL,y1:H-padB,x2:W-padR,y2:H-padB,class:'baseline'}));
+  // build stacked layers (S[0] at bottom)
+  const lower=new Array(n).fill(0);
+  S.forEach(d=>{
+    const upper=lower.map((lo,i)=>lo+T.matrix[i][d]);
+    let dtop='M', dbot='';
+    for(let i=0;i<n;i++) dtop+=`${X(i).toFixed(1)},${Y(upper[i]).toFixed(1)} `+(i<n-1?'L':'');
+    for(let i=n-1;i>=0;i--) dbot+=`L${X(i).toFixed(1)},${Y(lower[i]).toFixed(1)} `;
+    const path=el('path',{d:dtop+dbot+'Z',fill:colOf[d],'fill-opacity':.82,stroke:'var(--surface-1)','stroke-width':.6});
+    svg.appendChild(path);
+    for(let i=0;i<n;i++) lower[i]=upper[i];
+  });
+  // creation markers (staggered labels to avoid overlap)
+  const fracIdx=iso=>{const mi=M.indexOf(iso.slice(0,7));
+    if(mi<0){ // before range: place at left, offset by day within prior month approx
+      return (new Date(iso)<new Date(M[0]+'-01'))?0:0; }
+    return mi+(parseInt(iso.slice(8,10),10)-1)/30;};
+  const marks=S.map(d=>({d,iso:T.created[d],x:X(fracIdx(T.created[d]))})).sort((a,b)=>a.x-b.x);
+  let row=0,lastX=-99;
+  marks.forEach(mk=>{
+    if(mk.x-lastX<70) row++; else row=0; lastX=mk.x;
+    const ly=8+row*13;
+    svg.appendChild(el('line',{x1:mk.x,y1:ly+2,x2:mk.x,y2:H-padB,stroke:colOf[mk.d],'stroke-width':1,'stroke-dasharray':'3 3','stroke-opacity':.55}));
+    const tri=el('path',{d:`M${mk.x-4},${ly-4} L${mk.x+4},${ly-4} L${mk.x},${ly+2} Z`,fill:colOf[mk.d]});
+    svg.appendChild(tri);
+    const t=el('text',{x:mk.x+7,y:ly,class:'dotlab',fill:colOf[mk.d]});
+    const dt=new Date(mk.iso).toLocaleDateString('en-US',{month:'short',year:'numeric'});
+    t.textContent=`${mk.d} created ${dt}`;svg.appendChild(t);
+  });
+  // hover crosshair + tooltip (nearest month)
+  const cross=el('line',{x1:0,y1:padT,x2:0,y2:H-padB,stroke:'var(--muted)','stroke-width':1,opacity:0});
+  svg.appendChild(cross);
+  const hit=el('rect',{x:padL,y:padT,width:W-padL-padR,height:H-padT-padB,fill:'transparent'});
+  hit.addEventListener('mousemove',e=>{
+    const r=svg.getBoundingClientRect();
+    const px=(e.clientX-r.left)/r.width*W;
+    let i=Math.round((px-padL)/((W-padL-padR)/(n-1)));
+    i=Math.max(0,Math.min(n-1,i));
+    cross.setAttribute('x1',X(i));cross.setAttribute('x2',X(i));cross.setAttribute('opacity',.7);
+    const rows=S.map(d=>[d,T.matrix[i][d]]).filter(x=>x[1]>0).sort((a,b)=>b[1]-a[1]);
+    const tot=S.reduce((s,d)=>s+T.matrix[i][d],0);
+    let html=`<b>${M[i]}</b> — total ${fmtTB(tot)}`;
+    rows.forEach(([d,v])=>html+=`<br><span class="sw" style="display:inline-block;background:${colOf[d]}"></span> ${d} <span class="k">${fmtTB(v)}</span>`);
+    if(!rows.length)html+='<br><span class="k">no traffic</span>';
+    showTT(html,e);
+  });
+  hit.addEventListener('mouseleave',()=>{hideTT();cross.setAttribute('opacity',0);});
+  svg.appendChild(hit);
+  document.getElementById('areachart').appendChild(svg);
+})();
+
+/* ---------- WORLD MAP (bubble / points) ---------- */
+(function(){
+  const W=MAPDATA.W,H=MAPDATA.H;
+  const pts=MAPDATA.points.slice().sort((a,b)=>b.bytes-a.bytes);
+  const phys=pts.filter(p=>!p.cloud), cloud=pts.filter(p=>p.cloud);
+  const maxB=Math.max(...phys.map(p=>p.bytes));
+  const R=b=>Math.max(3.5, 26*Math.sqrt(b/maxB));
+  const PX=lon=>(lon+180)/360*W, PY=lat=>(90-lat)/180*H;
+  // legend
+  document.getElementById('leg-map').innerHTML=
+    `<span><span class="sw" style="background:var(--m-ephys);border-radius:50%"></span>User region</span>`+
+    `<span><span class="sw" style="background:transparent;border:1.5px solid var(--muted);border-radius:50%"></span>Cloud / data-center egress</span>`+
+    `<span style="color:var(--muted)">circle area ∝ data volume</span>`;
+
+  const svg=el('svg',{viewBox:`0 0 ${W} ${H}`,role:'img','aria-label':'World map of data downloads by region'});
+  // ocean/frame
+  svg.appendChild(el('rect',{x:0,y:0,width:W,height:H,fill:'var(--surface-1)'}));
+  // land
+  svg.appendChild(el('path',{d:MAPDATA.land,fill:'var(--grid)',stroke:'var(--axis)','stroke-width':.4,'stroke-linejoin':'round'}));
+  // cloud markers (hollow, drawn under)
+  cloud.forEach(p=>{
+    const c=el('circle',{cx:PX(p.lon),cy:PY(p.lat),r:R(p.bytes),fill:'none',stroke:'var(--muted)','stroke-width':1.5,'stroke-opacity':.75,class:'dot'});
+    c.style.stroke='var(--muted)';
+    c.addEventListener('mousemove',e=>showTT(`<b>${p.n}</b><br><span class="k">cloud / data-center</span><br><span class="k">Volume</span> ${fmtTB(p.bytes)}`,e));
+    c.addEventListener('mouseleave',hideTT);svg.appendChild(c);
+  });
+  // physical regions (filled)
+  phys.forEach(p=>{
+    const c=el('circle',{cx:PX(p.lon),cy:PY(p.lat),r:R(p.bytes),fill:'var(--m-ephys)','fill-opacity':.62,class:'dot'});
+    c.addEventListener('mousemove',e=>showTT(`<b>${p.n}</b><br><span class="k">Volume</span> ${fmtTB(p.bytes)}`,e));
+    c.addEventListener('mouseleave',hideTT);svg.appendChild(c);
+  });
+  // direct labels for top physical regions
+  phys.slice(0,6).forEach(p=>{
+    const t=el('text',{x:PX(p.lon),y:PY(p.lat)-R(p.bytes)-3,'text-anchor':'middle',class:'dotlab'});
+    t.textContent=p.n.split('/').pop();svg.appendChild(t);
+  });
+  document.getElementById('map').appendChild(svg);
+})();
+
+/* ---------- GEO BAR ---------- */
+(function(){
+  const HIDE=new Set(['missing','undetermined','bogon']);
+  const rows=DATA.regions.filter(r=>!HIDE.has(r.region)).slice(0,12);
+  const W=1000,rowH=30,padL=150,padR=90,padT=6,H=padT+rows.length*rowH+6;
+  const max=rows[0].bytes,x=v=>padL+(W-padL-padR)*v/max;
+  const svg=el('svg',{viewBox:`0 0 ${W} ${H}`,role:'img'});
+  for(let i=0;i<=4;i++){const gv=max*i/4,gx=x(gv);
+    svg.appendChild(el('line',{x1:gx,y1:padT,x2:gx,y2:H-6,class:'gridline'}));
+    const t=el('text',{x:gx,y:H,'text-anchor':'middle',class:'axlab'});t.textContent=(gv/1e12).toFixed(0)+'T';svg.appendChild(t);}
+  const cloud=/^(AWS|GCP|VPN|GitHub)/;
+  rows.forEach((r,i)=>{
+    const y=padT+i*rowH+3,bh=20;
+    const lab=el('text',{x:padL-12,y:y+bh-5,'text-anchor':'end',class:'rowlab'});lab.textContent=r.region;svg.appendChild(lab);
+    const bw=Math.max(x(r.bytes)-padL,2);
+    const isCloud=cloud.test(r.region);
+    const bar=el('rect',{x:padL,y,width:bw,height:bh,rx:4,fill:isCloud?'var(--muted)':'var(--m-ephys)','fill-opacity':isCloud?.55:1});
+    bar.addEventListener('mousemove',e=>showTT(`<b>${r.region}</b><br><span class="k">Volume</span> ${fmtTB(r.bytes)}${isCloud?'<br><span class="k">cloud / masked egress</span>':''}`,e));
+    bar.addEventListener('mouseleave',hideTT);svg.appendChild(bar);
+    const vl=el('text',{x:padL+bw+8,y:y+bh-5,class:'vlab'});vl.textContent=fmtTB(r.bytes);svg.appendChild(vl);
+  });
+  document.getElementById('geobar').appendChild(svg);
+})();
+
+/* ---------- FULL TABLE ---------- */
+(function(){
+  const cols=['Dandiset','PI','Modality','Species','Year','Status','Volume','Downloads','Requests','Users','Countries'];
+  let h='<thead><tr>'+cols.map((c,i)=>`<th class="${i<6?'l':''}">${c}</th>`).join('')+'</tr></thead><tbody>';
+  ORDER.forEach(d=>{
+    const m=META[d],p=DATA.per[d];
+    const stTxt=m.st==='embargoed'?`embargoed→${m.rel}`:m.st;
+    h+=`<tr><td class="l">${d}</td><td class="l">${m.pi}</td><td class="l">${m.mod}</td><td class="l">${m.sp}</td><td class="l">${m.yr}</td><td class="l">${stTxt}</td>`;
+    if(p){h+=`<td>${fmtTB(p.bytes)}</td><td>${fmtN(p.dl)}</td><td>${p.req.toLocaleString()}</td><td>${p.users.toLocaleString()}</td><td>${p.countries}</td>`;}
+    else{h+=`<td colspan="5" style="text-align:center;color:var(--muted)">— no access data —</td>`;}
+    h+='</tr>';
+  });
+  h+='</tbody>';
+  document.getElementById('tbl').innerHTML=h;
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,5 @@
+# Build caches (downloaded API responses + access-summaries tarball)
+.cache/
+__pycache__/
+*.pyc
+.DS_Store
