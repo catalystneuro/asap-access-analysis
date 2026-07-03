@@ -441,7 +441,8 @@ timePanel('time-bytes','bytes',v=>(v/1e12).toFixed(0)+'T','var(--m-ephys)','Mont
   const ids=Object.keys(byId).sort((a,b)=>(DATA.per[b]?.bytes||0)-(DATA.per[a]?.bytes||0));
   const sel=document.getElementById('map-select');
   sel.innerHTML=`<option value="__all__">All datasets combined</option>`+
-    ids.map(d=>`<option value="${d}">${d} — ${META[d]?.mod||''}</option>`).join('');
+    ids.map(d=>{const pi=META[d]?.pi; const lab=(pi&&pi!=='—')?` — ${pi}`:'';
+      return `<option value="${d}">${d}${lab}</option>`;}).join('');
 
   // static base: ocean + land + a group we redraw bubbles into
   const svg=el('svg',{viewBox:`0 0 ${W} ${H}`,role:'img','aria-label':'World map of data downloads by region'});
