@@ -53,6 +53,11 @@
   .legend{display:flex;flex-wrap:wrap;gap:14px;margin:0 0 16px;font-size:12.5px;color:var(--ink-2)}
   .legend span{display:inline-flex;align-items:center;gap:6px}
   .sw{width:11px;height:11px;border-radius:3px;flex:none}
+  /* map control */
+  .mapctl{display:flex;align-items:center;gap:9px;margin:0 0 14px;font-size:13px;color:var(--ink-2)}
+  .mapctl label{color:var(--muted)}
+  .mapctl select{font:inherit;font-size:13px;color:var(--ink);background:var(--surface-1);
+    border:1px solid var(--ring);border-radius:8px;padding:6px 10px;cursor:pointer;max-width:100%}
   /* generic svg */
   svg{display:block;width:100%;height:auto;overflow:visible}
   .axlab{fill:var(--muted);font-size:11px}
@@ -142,7 +147,9 @@
   <!-- MAP -->
   <div class="card">
     <h2>Global reach</h2>
-    <p class="note">Each circle is a region that pulled data, placed at its location and sized (area) by volume served. Modeled on the DANDI usage page's points view. Cloud/data-center egress (AWS, GCP) is shown separately — it marks server locations, not people.</p>
+    <p class="note">Each circle is a region that pulled data, placed at its location and sized (area) by volume served. Pick a Dandiset to see where its downloads came from, or view all combined. Modeled on the DANDI usage page's points view. Cloud/data-center egress (AWS, GCP) is shown separately — it marks server locations, not people.</p>
+    <div class="mapctl"><label for="map-select">Show downloads for</label>
+      <select id="map-select"></select></div>
     <div class="legend" id="leg-map"></div>
     <div id="map"></div>
   </div>
@@ -418,44 +425,64 @@ timePanel('time-bytes','bytes',v=>(v/1e12).toFixed(0)+'T','var(--m-ephys)','Mont
   document.getElementById('areachart').appendChild(svg);
 })();
 
-/* ---------- WORLD MAP (bubble / points) ---------- */
+/* ---------- WORLD MAP (bubble / points, per-dataset selectable) ---------- */
 (function(){
   const W=MAPDATA.W,H=MAPDATA.H;
-  const pts=MAPDATA.points.slice().sort((a,b)=>b.bytes-a.bytes);
-  const phys=pts.filter(p=>!p.cloud), cloud=pts.filter(p=>p.cloud);
-  const maxB=Math.max(...phys.map(p=>p.bytes));
-  const R=b=>Math.max(3.5, 26*Math.sqrt(b/maxB));
   const PX=lon=>(lon+180)/360*W, PY=lat=>(90-lat)/180*H;
-  // legend
+  const byId=MAPDATA.byId||{};
+
+  // legend (static)
   document.getElementById('leg-map').innerHTML=
     `<span><span class="sw" style="background:var(--m-ephys);border-radius:50%"></span>User region</span>`+
     `<span><span class="sw" style="background:transparent;border:1.5px solid var(--muted);border-radius:50%"></span>Cloud / data-center egress</span>`+
     `<span style="color:var(--muted)">circle area ∝ data volume</span>`;
 
+  // selector: "All datasets" + each dataset, ordered by download volume
+  const ids=Object.keys(byId).sort((a,b)=>(DATA.per[b]?.bytes||0)-(DATA.per[a]?.bytes||0));
+  const sel=document.getElementById('map-select');
+  sel.innerHTML=`<option value="__all__">All datasets combined</option>`+
+    ids.map(d=>`<option value="${d}">${d} — ${META[d]?.mod||''}</option>`).join('');
+
+  // static base: ocean + land + a group we redraw bubbles into
   const svg=el('svg',{viewBox:`0 0 ${W} ${H}`,role:'img','aria-label':'World map of data downloads by region'});
-  // ocean/frame
   svg.appendChild(el('rect',{x:0,y:0,width:W,height:H,fill:'var(--surface-1)'}));
-  // land
   svg.appendChild(el('path',{d:MAPDATA.land,fill:'var(--grid)',stroke:'var(--axis)','stroke-width':.4,'stroke-linejoin':'round'}));
-  // cloud markers (hollow, drawn under)
-  cloud.forEach(p=>{
-    const c=el('circle',{cx:PX(p.lon),cy:PY(p.lat),r:R(p.bytes),fill:'none',stroke:'var(--muted)','stroke-width':1.5,'stroke-opacity':.75,class:'dot'});
-    c.style.stroke='var(--muted)';
-    c.addEventListener('mousemove',e=>showTT(`<b>${p.n}</b><br><span class="k">cloud / data-center</span><br><span class="k">Volume</span> ${fmtTB(p.bytes)}`,e));
-    c.addEventListener('mouseleave',hideTT);svg.appendChild(c);
-  });
-  // physical regions (filled)
-  phys.forEach(p=>{
-    const c=el('circle',{cx:PX(p.lon),cy:PY(p.lat),r:R(p.bytes),fill:'var(--m-ephys)','fill-opacity':.62,class:'dot'});
-    c.addEventListener('mousemove',e=>showTT(`<b>${p.n}</b><br><span class="k">Volume</span> ${fmtTB(p.bytes)}`,e));
-    c.addEventListener('mouseleave',hideTT);svg.appendChild(c);
-  });
-  // direct labels for top physical regions
-  phys.slice(0,6).forEach(p=>{
-    const t=el('text',{x:PX(p.lon),y:PY(p.lat)-R(p.bytes)-3,'text-anchor':'middle',class:'dotlab'});
-    t.textContent=p.n.split('/').pop();svg.appendChild(t);
-  });
+  const layer=el('g',{});svg.appendChild(layer);
+  const caption=el('text',{x:10,y:H-12,class:'dotlab',fill:'var(--muted)'});svg.appendChild(caption);
   document.getElementById('map').appendChild(svg);
+
+  function draw(points,label){
+    while(layer.firstChild) layer.removeChild(layer.firstChild);
+    const pts=points.slice().sort((a,b)=>b.bytes-a.bytes);
+    const phys=pts.filter(p=>!p.cloud), cloud=pts.filter(p=>p.cloud);
+    if(!pts.length){caption.textContent=label+' — no located regions';return;}
+    const maxB=Math.max(...pts.map(p=>p.bytes));
+    const R=b=>Math.max(3.5, 26*Math.sqrt(b/maxB));
+    cloud.forEach(p=>{
+      const c=el('circle',{cx:PX(p.lon),cy:PY(p.lat),r:R(p.bytes),fill:'none',stroke:'var(--muted)','stroke-width':1.5,'stroke-opacity':.75,class:'dot'});
+      c.addEventListener('mousemove',e=>showTT(`<b>${p.n}</b><br><span class="k">cloud / data-center</span><br><span class="k">Volume</span> ${fmtTB(p.bytes)}`,e));
+      c.addEventListener('mouseleave',hideTT);layer.appendChild(c);
+    });
+    phys.forEach(p=>{
+      const c=el('circle',{cx:PX(p.lon),cy:PY(p.lat),r:R(p.bytes),fill:'var(--m-ephys)','fill-opacity':.62,class:'dot'});
+      c.addEventListener('mousemove',e=>showTT(`<b>${p.n}</b><br><span class="k">Volume</span> ${fmtTB(p.bytes)}`,e));
+      c.addEventListener('mouseleave',hideTT);layer.appendChild(c);
+    });
+    phys.slice(0,6).forEach(p=>{
+      const t=el('text',{x:PX(p.lon),y:PY(p.lat)-R(p.bytes)-3,'text-anchor':'middle',class:'dotlab'});
+      t.textContent=p.n.split('/').pop();layer.appendChild(t);
+    });
+    const tot=pts.reduce((s,p)=>s+p.bytes,0);
+    caption.textContent=`${label} · ${phys.length} located regions · ${fmtTB(tot)} to mapped locations`;
+  }
+
+  function update(){
+    const v=sel.value;
+    if(v==='__all__') draw(MAPDATA.points,'All datasets combined');
+    else draw(byId[v]||[], v);
+  }
+  sel.addEventListener('change',update);
+  update();
 })();
 
 /* ---------- GEO BAR ---------- */

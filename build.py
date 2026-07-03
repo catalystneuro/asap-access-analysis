@@ -212,8 +212,9 @@ def load_land(offline: bool) -> str:
     return " ".join(paths)
 
 
-def build_map(content: Path, regions: list[dict], offline: bool) -> dict:
-    coords = yaml.safe_load((content / "region_codes_to_coordinates.yaml").read_text())
+def _region_points(regions: list[dict], coords: dict) -> list[dict]:
+    """Project a list of {region, bytes} onto map coordinates, dropping
+    non-geographic regions and any without known coordinates."""
     points = []
     for r in regions:
         name = r["region"]
@@ -231,7 +232,21 @@ def build_map(content: Path, regions: list[dict], offline: bool) -> dict:
                 "cloud": name.startswith(CLOUD_PREFIXES),
             }
         )
-    return {"land": load_land(offline), "W": MAP_W, "H": MAP_H, "points": points}
+    return points
+
+
+def build_map(content: Path, regions: list[dict], present: list[str], offline: bool) -> dict:
+    coords = yaml.safe_load((content / "region_codes_to_coordinates.yaml").read_text())
+    combined = _region_points(regions, coords)
+    by_id = {}
+    for d in present:
+        rows = [
+            {"region": r["region"], "bytes": int(r["bytes_sent"])}
+            for r in read_tsv(content / "summaries" / d / "by_region.tsv")
+        ]
+        rows.sort(key=lambda x: -x["bytes"])
+        by_id[d] = _region_points(rows, coords)
+    return {"land": load_land(offline), "W": MAP_W, "H": MAP_H, "points": combined, "byId": by_id}
 
 
 # ───────────────────────────── timeline ─────────────────────────────
@@ -298,7 +313,7 @@ def main() -> None:
     dmeta = dandi_meta(present, args.offline)
     sizes = {d: dmeta[d]["size"] for d in present if dmeta.get(d, {}).get("size") is not None}
     timeline = build_timeline(content, data["per"], dmeta)
-    mapdata = build_map(content, data["regions"], args.offline)
+    mapdata = build_map(content, data["regions"], present, args.offline)
 
     template = Path(args.template).read_text()
     html = render(
