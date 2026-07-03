@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Download and access statistics for 20 ASAP-affiliated Dandisets on the DANDI Archive.">
+<meta name="description" content="Download and access statistics for ASAP-affiliated Dandisets on the DANDI Archive.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%93%8A%3C/text%3E%3C/svg%3E">
 <meta name="color-scheme" content="light dark">
 <title>ASAP Dandiset Download Analysis</title>
@@ -101,7 +101,7 @@
 <div class="wrap">
   <header>
     <h1>ASAP Dandiset Download Analysis</h1>
-    <p class="sub">Access statistics for 20 ASAP-affiliated Dandisets on the DANDI Archive — full downloads and streaming traffic. 11 of the 20 have recorded public access; the other 9 are embargoed or newly drafted.</p>
+    <p class="sub">Access statistics for <span data-count="total">20</span> ASAP-affiliated Dandisets on the DANDI Archive — full downloads and streaming traffic. <span data-count="withData">11</span> of the <span data-count="total">20</span> have recorded public access; the other <span data-count="withoutData">9</span> are embargoed or newly drafted.</p>
     <p class="meta">Source: DANDI <code>access-summaries</code> · data through 21 Jun 2026 · full-download counts under 50 are privacy-suppressed by DANDI</p>
   </header>
 
@@ -110,7 +110,7 @@
   <!-- COVERAGE -->
   <div class="card">
     <h2>Status of datasets</h2>
-    <p class="note">Publication status of all 20 requested Dandisets. <b>8 datasets are awaiting the publication of their corresponding paper and have not been shared publicly yet</b>, so they carry no download traffic — this accounts for most of the datasets without data.</p>
+    <p class="note">Publication status of all <span data-count="total">20</span> requested Dandisets. <b><span data-count="embargoed">8</span> datasets are awaiting the publication of their corresponding paper and have not been shared publicly yet</b>, so they carry no download traffic — this accounts for most of the datasets without data.</p>
     <div id="status"></div>
   </div>
 
@@ -131,7 +131,7 @@
 
   <!-- TIME -->
   <div class="card">
-    <h2>Traffic over time (all 11 combined)</h2>
+    <h2>Traffic over time (all <span data-count="withData">11</span> combined)</h2>
     <p class="note">Monthly data volume served. It climbs sharply through late 2025 into 2026 as newer large datasets come online.</p>
     <div id="time-bytes"></div>
   </div>
@@ -162,7 +162,7 @@
   </div>
 
   <details>
-    <summary>▸ Full data table (all 20 Dandisets)</summary>
+    <summary>▸ Full data table (all <span data-count="total">20</span> Dandisets)</summary>
     <div style="overflow-x:auto"><table id="tbl"></table></div>
   </details>
 
@@ -215,15 +215,29 @@ function moveTT(e){let x=e.clientX+14,y=e.clientY+14;const r=tt.getBoundingClien
   tt.style.left=x+'px';tt.style.top=y+'px';}
 function hideTT(){tt.style.opacity=0;}
 
+/* ---------- DYNAMIC COUNTS (data-count spans) ---------- */
+(function(){
+  const c={
+    total:ORDER.length,
+    withData:Object.keys(DATA.per).length,
+    embargoed:ORDER.filter(d=>META[d].st==='embargoed').length,
+  };
+  c.withoutData=c.total-c.withData;
+  document.querySelectorAll('[data-count]').forEach(e=>{
+    const v=c[e.getAttribute('data-count')]; if(v!=null) e.textContent=v;
+  });
+})();
+
 /* ---------- HERO TILES ---------- */
 (function(){
   let tot=0,dl=0,req=0,withData=Object.keys(DATA.per).length;
   for(const k in DATA.per){tot+=DATA.per[k].bytes;dl+=(DATA.per[k].dl||25);req+=DATA.per[k].req;}
   const emb=ORDER.filter(d=>META[d].st==='embargoed').length;
+  const draftWithData=ORDER.filter(d=>META[d].st==='draft'&&DATA.per[d]).length;
   const tiles=[
-    {v:(tot/1e12).toFixed(1)+' TB',l:'Total data served',s:'across 11 sets with public traffic'},
+    {v:(tot/1e12).toFixed(1)+' TB',l:'Total data served',s:`across ${withData} sets with public traffic`},
     {v:'~'+Math.round(dl/1000)+'k',l:'Full downloads',s:'plus '+(req/1e6).toFixed(1)+'M total requests'},
-    {v:'11 / 20',l:'Datasets with access data',s:emb+' embargoed · 2 draft w/ traffic'},
+    {v:`${withData} / ${ORDER.length}`,l:'Datasets with access data',s:`${emb} embargoed · ${draftWithData} draft w/ traffic`},
   ];
   document.getElementById('tiles').innerHTML=tiles.map(t=>
     `<div class="tile"><div class="v">${t.v}</div><div class="l">${t.l}</div><div class="s">${t.s}</div></div>`).join('');
