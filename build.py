@@ -31,6 +31,7 @@ import sys
 import tarfile
 import urllib.request
 from collections import defaultdict
+from datetime import datetime
 from pathlib import Path
 
 import yaml
@@ -316,6 +317,14 @@ def main() -> None:
     present, data = build_access(content, order)
     log(f"• {len(present)}/{len(order)} datasets have access data")
 
+    # Latest day present in any dataset's by_day series — drives the "data through" stamp.
+    last_iso = max((p["last"] for p in data["per"].values()), default="")
+    asof = (
+        datetime.strptime(last_iso, "%Y-%m-%d").strftime("%-d %b %Y")
+        if last_iso else "n/a"
+    )
+    log(f"• data through {asof}")
+
     dmeta = dandi_meta(present, args.offline)
     sizes = {d: dmeta[d]["size"] for d in present if dmeta.get(d, {}).get("size") is not None}
     timeline = build_timeline(content, data["per"], dmeta)
@@ -331,9 +340,10 @@ def main() -> None:
             "__MAP__": json.dumps(mapdata),
             "__META__": json.dumps(meta_js, ensure_ascii=False),
             "__ORDER__": json.dumps(order),
+            "__ASOF__": asof,
         },
     )
-    for placeholder in ("__DATA__", "__SIZES__", "__TIMELINE__", "__MAP__", "__META__", "__ORDER__"):
+    for placeholder in ("__DATA__", "__SIZES__", "__TIMELINE__", "__MAP__", "__META__", "__ORDER__", "__ASOF__"):
         if placeholder in html:
             sys.exit(f"ERROR: placeholder {placeholder} left unfilled in template")
 

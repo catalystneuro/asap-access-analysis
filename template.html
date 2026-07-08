@@ -104,8 +104,8 @@
 <div class="wrap">
   <header>
     <h1>ASAP Dandiset Download Analysis</h1>
-    <p class="sub">Access statistics for <span data-count="total">20</span> ASAP-affiliated Dandisets on the DANDI Archive — full downloads and streaming traffic. <span data-count="withData">11</span> of the <span data-count="total">20</span> have recorded public access; the other <span data-count="withoutData">9</span> are embargoed or newly drafted.</p>
-    <p class="meta">Source: DANDI <code>access-summaries</code> · data through 21 Jun 2026 · full-download counts under 50 are privacy-suppressed by DANDI</p>
+    <p class="sub">Access statistics for <span data-count="total">20</span> ASAP-affiliated Dandisets on the DANDI Archive — file downloads and streaming traffic. <span data-count="withData">11</span> of the <span data-count="total">20</span> have recorded public access; the other <span data-count="withoutData">9</span> are embargoed or newly drafted.</p>
+    <p class="meta">Source: DANDI <code>access-summaries</code> · data through __ASOF__ · file-download counts under 50 are privacy-suppressed by DANDI</p>
   </header>
 
   <div class="tiles" id="tiles"></div>
@@ -141,7 +141,7 @@
   <!-- SCATTER -->
   <div class="card">
     <h2>Reach vs. volume — two kinds of "popular"</h2>
-    <p class="note">Full downloads (how many people pulled it) against data volume (how heavy it is), both log-scaled. Bubble area ∝ unique requesters. The split is stark: heavy ephys files draw a small specialist audience (lower-right), while light photometry sets reach broad audiences (upper-left).</p>
+    <p class="note">File downloads (how many people pulled it) against data volume (how heavy it is), both log-scaled. Bubble area ∝ unique requesters. The split is stark: heavy ephys files draw a small specialist audience (lower-right), while light photometry sets reach broad audiences (upper-left).</p>
     <div id="scatter"></div>
   </div>
 
@@ -235,7 +235,7 @@ function hideTT(){tt.style.opacity=0;}
   const draftWithData=ORDER.filter(d=>META[d].st==='draft'&&DATA.per[d]).length;
   const tiles=[
     {v:(tot/1e12).toFixed(1)+' TB',l:'Total data served',s:`across ${withData} sets with public traffic`},
-    {v:'~'+Math.round(dl/1000)+'k',l:'Full downloads',s:'plus '+(req/1e6).toFixed(1)+'M total requests'},
+    {v:'~'+Math.round(dl/1000)+'k',l:'File downloads',s:'plus '+(req/1e6).toFixed(1)+'M total requests'},
     {v:`${withData} / ${ORDER.length}`,l:'Datasets with access data',s:`${emb} embargoed · ${draftWithData} draft w/ traffic`},
   ];
   document.getElementById('tiles').innerHTML=tiles.map(t=>
@@ -328,7 +328,7 @@ document.getElementById('leg-mod').innerHTML=Object.keys(MODLAB).map(k=>
     const t=el('text',{x:padL-10,y:gy+4,'text-anchor':'end',class:'axlab'});
     t.textContent=(gv/1e12<1?(gv/1e12).toFixed(2):(gv/1e12).toFixed(0));svg.appendChild(t);});
   // axis titles
-  let ax=el('text',{x:(padL+W-padR)/2,y:H-8,'text-anchor':'middle',class:'axtitle'});ax.textContent='Full downloads (count, log scale) →';svg.appendChild(ax);
+  let ax=el('text',{x:(padL+W-padR)/2,y:H-8,'text-anchor':'middle',class:'axtitle'});ax.textContent='File downloads (count, log scale) →';svg.appendChild(ax);
   let ay=el('text',{x:16,y:(padT+H-padB)/2,'text-anchor':'middle',class:'axtitle',transform:`rotate(-90 16 ${(padT+H-padB)/2})`});ay.textContent='Data volume served (TB, log scale) →';svg.appendChild(ay);
   // bubbles
   const rS=v=>Math.max(6,Math.sqrt(v)/2.4);
