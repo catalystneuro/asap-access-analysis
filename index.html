@@ -141,7 +141,7 @@
   <!-- SCATTER -->
   <div class="card">
     <h2>Reach vs. volume — two kinds of "popular"</h2>
-    <p class="note">File downloads (how many people pulled it) against data volume (how heavy it is), both log-scaled. Bubble area ∝ unique requesters. The split is stark: heavy ephys files draw a small specialist audience (lower-right), while light photometry sets reach broad audiences (upper-left).</p>
+    <p class="note">File downloads against data volume (how heavy it is), both log-scaled. Bubble area ∝ number of countries reached.</p>
     <div id="scatter"></div>
   </div>
 
@@ -155,7 +155,7 @@
   <!-- STACKED AREA PER DANDISET -->
   <div class="card">
     <h2>Data served over time, by Dandiset (top 6)</h2>
-    <p class="note">Monthly volume for the six highest-volume datasets, stacked. Dashed markers (▼) show when each Dandiset was created on DANDI — note the lag between creation and the first burst of downloads.</p>
+    <p class="note">Monthly volume for the six highest-volume datasets, stacked. Dashed markers (▼) show when each Dandiset was created on DANDI.</p>
     <div class="legend" id="leg-area"></div>
     <div id="areachart"></div>
   </div>
@@ -331,16 +331,16 @@ document.getElementById('leg-mod').innerHTML=Object.keys(MODLAB).map(k=>
   let ax=el('text',{x:(padL+W-padR)/2,y:H-8,'text-anchor':'middle',class:'axtitle'});ax.textContent='File downloads (count, log scale) →';svg.appendChild(ax);
   let ay=el('text',{x:16,y:(padT+H-padB)/2,'text-anchor':'middle',class:'axtitle',transform:`rotate(-90 16 ${(padT+H-padB)/2})`});ay.textContent='Data volume served (TB, log scale) →';svg.appendChild(ay);
   // bubbles
-  const rS=v=>Math.max(6,Math.sqrt(v)/2.4);
+  const rS=v=>Math.max(6,Math.sqrt(v)*4.5);
   pts.sort((a,b)=>b.bytes-a.bytes).forEach(p=>{
-    const cx=X(p.dl),cy=Y(p.bytes),r=rS(p.users);
+    const cx=X(p.dl),cy=Y(p.bytes),r=rS(p.countries);
     const c=el('circle',{cx,cy,r,class:'dot',fill:MODCOL[p.g],'fill-opacity':.72});
-    c.addEventListener('mousemove',e=>showTT(`<b>${p.d}</b> — ${META[p.d].pi}<br>${META[p.d].mod} · ${META[p.d].sp}<br><span class="k">Downloads</span> ${fmtN(p.dl)} · <span class="k">Volume</span> ${fmtTB(p.bytes)}<br><span class="k">Users</span> ${p.users.toLocaleString()} · ${p.countries} countries`,e));
+    c.addEventListener('mousemove',e=>showTT(`<b>${p.d}</b> — ${META[p.d].pi}<br>${META[p.d].mod} · ${META[p.d].sp}<br><span class="k">Downloads</span> ${fmtN(p.dl)} · <span class="k">Volume</span> ${fmtTB(p.bytes)}<br><span class="k">Countries</span> ${p.countries}`,e));
     c.addEventListener('mouseleave',hideTT);svg.appendChild(c);
     const t=el('text',{x:cx,y:cy-r-4,'text-anchor':'middle',class:'dotlab'});t.textContent=p.d;svg.appendChild(t);
   });
   // annotations
-  const a1=el('text',{x:X(400),y:Y(8e12),class:'rowsub','text-anchor':'start'});a1.textContent='◤ heavy files, few specialist users';svg.appendChild(a1);
+  const a1=el('text',{x:X(400),y:Y(8e12),class:'rowsub','text-anchor':'start'});a1.textContent='◤ heavy files, narrow reach';svg.appendChild(a1);
   const a2=el('text',{x:X(140000),y:Y(0.35e12),class:'rowsub','text-anchor':'end'});a2.textContent='broad audience, light files ◢';svg.appendChild(a2);
   document.getElementById('scatter').appendChild(svg);
   if(supp.length){const n=document.createElement('p');n.className='note';n.style.margin='10px 0 0';
@@ -384,7 +384,7 @@ timePanel('time-bytes','bytes',v=>(v/1e12).toFixed(0),'var(--m-ephys)','Monthly 
   const colOf={}; S.forEach((d,i)=>colOf[d]=COL[i]);
   // legend
   document.getElementById('leg-area').innerHTML=S.map((d,i)=>
-    `<span><span class="sw" style="background:${COL[i]}"></span>${d} · ${META[d].mod}</span>`).join('');
+    `<span><span class="sw" style="background:${COL[i]}"></span>${d} · ${(META[d].pi||'').split(' ').pop()}</span>`).join('');
 
   const W=1000,H=400,padL=58,padR=16,padT=44,padB=52;
   const X=i=>padL+(W-padL-padR)*(n<=1?0:i/(n-1));
